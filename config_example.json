@@ -1,0 +1,59 @@
+{
+"pidfile": "pidfile.pid",
+"mqtt": {
+	"host": "localhost",
+	"port": 1883
+},
+"deconz": {
+	"websocket_url": "ws://localhost:443",
+	"api_token": "123456"
+},
+"rules": [
+	{
+		"type": "deconz->mqtt",
+		"description": "Aquara 1 Temperature",
+		"matchers": [
+			{
+				"type": "has-key",
+				"key": "$['state'].temperature"
+			},
+			{
+				"type": "keyvalue",
+				"key":	"e",
+				"value": "changed"
+			},
+			{
+				"type": "keyvalue",
+				"key":	"uniqueid",
+				"value": "13245"
+			}
+		],
+		"value-expression": "$['state'].temperature",
+		"value-format": "{0[0]}{0[1]}.{0[2]}{0[3]}",
+		"mqtt-topic": "home/aquara1/temperature"
+	},
+	{
+		"type": "deconz->mqtt",
+		"description": "Aquara 1 Humidity",
+		"matchers": [
+			{
+				"type": "has-key",
+				"key": "$['state'].humidity"
+			},
+			{
+				"type": "keyvalue",
+				"key":	"e",
+				"value": "changed"
+			},
+			{
+				"type": "keyvalue",
+				"key":	"uniqueid",
+				"value": "1234"
+			}
+		],
+		"value-expression": "$['state'].humidity",
+		"value-format": "{0[0]}{0[1]}.{0[2]}{0[3]}",
+		"mqtt-topic": "home/aquara1/humidity"
+	}
+]	
+}
