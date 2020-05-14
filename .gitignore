@@ -125,3 +125,5 @@ dmypy.json
 .pyre/
 config.json
 received_jsons/
+pidfile.pid
+results.jsons

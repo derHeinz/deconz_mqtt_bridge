@@ -1,7 +1,8 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import unittest
-import logging
 import json
-import sys
 
 from . deconz_to_mqtt_processor import DeconzToMqttProcessor
 
@@ -49,7 +50,7 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
             ],
             "value-expression": "$['state'].humidity",
             "value-format": "{0[0]}{0[1]}.{0[2]}{0[3]}",
-            "mqtt-topic": "test/Test"
+            "target-mqtt-topic": "test/Test"
         }
         ]
         ''')
@@ -58,8 +59,10 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
         test_mqtt = TestMqtt()
         testee = DeconzToMqttProcessor(rules, test_mqtt)
         testee.process_message(json.loads('{"state":{"humidity":5399},"uniqueid":"1234"}'))
-        self.assertEqual("test/Test", test_mqtt.get_topic()) #topic from rules
+        self.assertTrue(test_mqtt.get_has_published())
+        
         self.assertEqual("53.99", test_mqtt.get_msg()) # value from static value
+        self.assertEqual("test/Test", test_mqtt.get_topic()) #topic from rules
         
     def test_static_value(self):
         # check with value only
@@ -76,7 +79,7 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
                 }
             ],
             "value": "42",
-            "mqtt-topic": "test/Test"
+            "target-mqtt-topic": "test/Test"
         }
         ]
         ''')
@@ -111,7 +114,7 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
                 }
             ],
             "value-expression": "$['state'].humidity",
-            "mqtt-topic": "test/XiaomiAquara1Hum"
+            "target-mqtt-topic": "test/XiaomiAquara1Hum"
         }
         ]
         ''')

@@ -1,10 +1,10 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import socket
 import asyncio
 import websockets
 import logging
-import argparse
-import sys
-
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,6 @@ class WSClient():
         self.ping_timeout = kwargs.get('ping_timeout') or 5
         self.sleep_time = kwargs.get('sleep_time') or 5
         self.callback = kwargs.get('callback')
-
 
     async def listen_forever(self):
         while True:

@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import logging
 import jsonpath
 
@@ -8,6 +11,14 @@ class Matcher(object):
     def matches(self, json_expr):
         pass
     
+class AlwaysMatcher(Matcher):
+    
+    def __init__(self):
+        pass
+        
+    def matches(self, data):
+        logger.debug("Matching.")
+        return True
     
 class HasKeyMatcher(Matcher):
 
@@ -68,6 +79,9 @@ def parse_matcher(matcher_config):
             raise ValueError('no value')
         v = matcher_config['value']
         return KeyValueMatcher(k, v)
+        
+    elif t == 'always':
+        return AlwaysMatcher()
         
     logger.warn("no matcher found for config {}.".format(matcher_config))
     return None
