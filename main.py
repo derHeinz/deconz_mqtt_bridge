@@ -38,11 +38,16 @@ def store_pid_file(pidfilename):
 def init_deconz_ws(config, d_to_m_proc):
     websocket_url = config['websocket_url']
     api_token = config['api_token']
+    debug_file = config.get('debug_file', None)
     
     def callback_fn(data, *args, **kwargs):
         logger.debug('callback received: {}'.format(data))
         # parse json from
         json_data = json.loads(data)
+        if (debug_file):
+            with open(debug_file,"a+") as out_file:
+                out_file.write(data)
+                out_file.write("\r\n")
         d_to_m_proc.process_message(json_data)
     
     client = WSClient(url=websocket_url, callback=callback_fn)
