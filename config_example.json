@@ -29,8 +29,8 @@
 				"value": "13245"
 			}
 		],
-		"value-expression": "$['state'].temperature",
-		"value-format": "{0[0]}{0[1]}.{0[2]}{0[3]}",
+		"extract-expression": "$['state'].temperature",
+		"otuput-expression": "{0[0]}{0[1]}.{0[2]}{0[3]}",
 		"target-mqtt-topic": "home/aquara1/temperature"
 	},
 	{
@@ -52,8 +52,8 @@
 				"value": "1234"
 			}
 		],
-		"value-expression": "$['state'].humidity",
-		"value-format": "{0[0]}{0[1]}.{0[2]}{0[3]}",
+		"extract-expression": "$['state'].humidity",
+		"otuput-expression": "{0[0]}{0[1]}.{0[2]}{0[3]}",
 		"target-mqtt-topic": "home/aquara1/humidity"
 	},
     
@@ -61,8 +61,8 @@
 		"type": "mqtt->deconz",
 		"description": "Some Switch sync 1 (get a message like 'true' on topic MySwitch/StateCommand and post 'true' to http://localhost:80/lights/01:23:45:67:89:0a:bc:de-01/state, same with false.)",
         "source-mqtt-topic": "MySwitch/StateCommand",
-		"value-expression-type": "regex",
-        "value-expression": "[Oo][Nn]|[Tt][Rr][Uu][Ee]|1",
+		"extract-type": "regex",
+        "extract-expression": "[Oo][Nn]|[Tt][Rr][Uu][Ee]|1",
         "target-path": "/lights/01:23:45:67:89:0a:bc:de-01/state"
 	},
     {
@@ -84,8 +84,8 @@
 				"value": "01:23:45:67:89:0a:bc:de-02"
 			}
 		],
-        "value-expression-type": "jsonpath",
-		"value-expression": "$['state'].on",
+        "extract-type": "jsonpath",
+		"extract-expression": "$['state'].on",
 		"target-mqtt-topic": "MySwitch/State"
 	},
 ]	

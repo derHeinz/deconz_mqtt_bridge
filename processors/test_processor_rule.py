@@ -22,37 +22,62 @@ class TestProcessorRule(unittest.TestCase):
             "type": "deconz->mqtt",
             "description": "value-and-expression",
             "value": "42",
-            "value-transform-expression": "/bookstore"
+            "transform-expression": "/bookstore"
+        }
+        ''')
+        self._assert_error_invalid_config(rule_json, "value-and-expression")
+        rule_json = json.loads('''
+        {
+            "type": "deconz->mqtt",
+            "description": "value-and-expression",
+            "value": "42",
+            "extract-expression": "/bookstore"
+        }
+        ''')
+        self._assert_error_invalid_config(rule_json, "value-and-expression")
+        rule_json = json.loads('''
+        {
+            "type": "deconz->mqtt",
+            "description": "value-and-expression",
+            "value": "42",
+            "output-expression": "/bookstore"
         }
         ''')
         self._assert_error_invalid_config(rule_json, "value-and-expression")
         
-        rule_json = json.loads('''
-        {
-            "type": "deconz->mqtt",
-            "description": "value-and-output",
-            "value": "xpath",
-            "value-output-format": "asdf"
-        }
-        ''')
-        self._assert_error_invalid_config(rule_json, "value-and-output")
-            
+        
         rule_json = json.loads('''
         {
             "type": "deconz->mqtt",
             "description": "no-expression",
-            "value-transform-expression-type": "regex"
+            "extract-type": "regex"
         }
         ''')
         self._assert_error_invalid_config(rule_json, "no-expression")
+        
+        
         
         rule_json = json.loads('''
         {
             "type": "deconz->mqtt",
             "description": "invalid-type",
-            "value-transform-expression-type": "xpath",
-            "value-transform-expression": "/bookstore"
+            "extract-type": "foo"
         }
         ''')
-        
+        self._assert_error_invalid_config(rule_json, "invalid-type")
+        rule_json = json.loads('''
+        {
+            "type": "deconz->mqtt",
+            "description": "invalid-type",
+            "transform-type": "bar"
+        }
+        ''')
+        self._assert_error_invalid_config(rule_json, "invalid-type")
+        rule_json = json.loads('''
+        {
+            "type": "deconz->mqtt",
+            "description": "invalid-type",
+            "output-type": "foobar"
+        }
+        ''')
         self._assert_error_invalid_config(rule_json, "invalid-type")

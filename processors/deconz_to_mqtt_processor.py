@@ -30,4 +30,7 @@ class DeconzToMqttProcessor(object):
                 topic = rule.get_config_value("target-mqtt-topic")
                 message = rule.get_value(msg)
                 logger.debug("rule hit! sending {} to topic {}".format(message, topic))
-                self.mqtt.publish(topic, message)
+                try:
+                    self.mqtt.publish(topic, message)
+                except Exception as e:
+                    logger.error(f"cannot send message, due to {e}.")

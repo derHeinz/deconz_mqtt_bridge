@@ -194,13 +194,6 @@ class TestMqttToDeconzProcessor(unittest.TestCase):
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
         assert res1 == ["foo", "bar"]
 
-    def test_todo(self):
-        
-        # create a readme.md file for project
-        
-        # runme with python -m unittest processors.test_mqtt_to_deconz_processor.TestMqttToDeconzProcessor.test_non_bool
-        self.fail("need to implement more tests")
-
     def test_single_bools(self):
         
         extract_expression = "[Oo][Nn]|[Tt][Rr][Uu][Ee]|1"

@@ -5,6 +5,10 @@ from urllib.request import urlopen, build_opener, HTTPHandler, Request
 import json
 import datetime
 
+def get_value_from(url):
+    # need to have this header all other headers are ignored!
+    req = Request(url)
+    return urlopen(req)
 
 def post_value_to(url, value):
     # need to have this header all other headers are ignored!

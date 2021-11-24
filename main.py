@@ -12,7 +12,7 @@ from mqtt_connector import MQTTConnector
 from processors.deconz_to_mqtt_processor import DeconzToMqttProcessor
 from processors.mqtt_to_deconz_processor import MqttToDeconzProcessor
 
-from webservice import put_value_to
+from webservice import get_value_from, put_value_to
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,13 @@ def init_deconz_ws(config, d_to_m_proc):
     
 def init_deconz_rest(config):
 
+    # make sure sth. is running there, break early if false-configured
+    api_token = config['api_token']
+    rest_url = config["rest_url"]
+    full_url = rest_url + "/api/" + api_token + "/config"
+    get_value_from(full_url)
+
+    # init a class to send PUT requests to deCONZ
     class Deconz(object):          
         
         def send(self, path, value_str):
@@ -69,9 +76,11 @@ def init_deconz_rest(config):
             api_token = config['api_token']
             rest_url = config["rest_url"]
             full_url = rest_url + "/api/" + api_token + path
-                        
-            put_value_to(full_url, value_str)
-            
+            try:
+                put_value_to(full_url, value_str)
+            except Exception as e:
+                logger.error(f"cannot send message, due to {e}.")
+
     return Deconz()
     
 def init_mqtt(config):
