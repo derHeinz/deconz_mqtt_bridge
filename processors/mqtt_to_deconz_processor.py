@@ -52,5 +52,4 @@ class MqttToDeconzProcessor(object):
                 if value:
                     value_bool = True
                     
-                self.deconz.send(rule.get_config_value("target-path"), value_bool)
-            
+                self.deconz.send(rule.get_config_value("target-path"), value)

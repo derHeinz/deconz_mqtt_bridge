@@ -31,4 +31,3 @@ class DeconzToMqttProcessor(object):
                 message = rule.get_value(msg)
                 logger.debug("rule hit! sending {} to topic {}".format(message, topic))
                 self.mqtt.publish(topic, message)
-        

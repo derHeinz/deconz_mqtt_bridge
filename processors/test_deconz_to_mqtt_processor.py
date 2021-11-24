@@ -31,7 +31,7 @@ class TestMqtt(object):
 class TestDeconzToMqttProcessor(unittest.TestCase):
 
     def test_value_expression_format(self):
-        # check with value-expression and value-format
+        # check with value-transform-expression and value-output-format
         # check with value only
         rules = json.loads('''
         [
@@ -48,8 +48,8 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
                     "value": "1234"
                 }
             ],
-            "value-expression": "$['state'].humidity",
-            "value-format": "{0[0]}{0[1]}.{0[2]}{0[3]}",
+            "extract-expression": "$['state'].humidity",
+            "output-expression": "{0[0]}{0[1]}.{0[2]}{0[3]}",
             "target-mqtt-topic": "test/Test"
         }
         ]
@@ -60,8 +60,56 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
         testee = DeconzToMqttProcessor(rules, test_mqtt)
         testee.process_message(json.loads('{"state":{"humidity":5399},"uniqueid":"1234"}'))
         self.assertTrue(test_mqtt.get_has_published())
-        
         self.assertEqual("53.99", test_mqtt.get_msg()) # value from static value
+        self.assertEqual("test/Test", test_mqtt.get_topic()) #topic from rules
+        
+        
+    def test_value_expression_format_2(self):
+        # check with value-transform-expression and value-output-format
+        # check with value only
+        rules = json.loads('''
+        [
+        {
+            "type": "deconz->mqtt",
+            "description": "Check with a static value",
+            "matchers": [
+                {
+                    "type": "has-key",
+                    "key": "$['state'].temperature"
+                },{
+                    "type": "keyvalue",
+                    "key":	"uniqueid",
+                    "value": "1234"
+                }
+            ],
+            "extract-expression": "$['state'].temperature",
+            "transform-expression": "divide-by-100",
+            "output-expression": "{:.2f}",
+            "target-mqtt-topic": "test/Test"
+        }
+        ]
+        ''')
+        
+        # valid example
+        test_mqtt = TestMqtt()
+        testee = DeconzToMqttProcessor(rules, test_mqtt)
+        testee.process_message(json.loads('{"state":{"temperature":5399},"uniqueid":"1234"}'))
+        self.assertTrue(test_mqtt.get_has_published())
+        self.assertEqual("53.99", test_mqtt.get_msg()) # value from static value
+        self.assertEqual("test/Test", test_mqtt.get_topic()) #topic from rules
+        
+        test_mqtt = TestMqtt()
+        testee = DeconzToMqttProcessor(rules, test_mqtt)
+        testee.process_message(json.loads('{"state":{"temperature":"0399"},"uniqueid":"1234"}'))
+        self.assertTrue(test_mqtt.get_has_published())
+        self.assertEqual("3.99", test_mqtt.get_msg()) # value from static value
+        self.assertEqual("test/Test", test_mqtt.get_topic()) #topic from rules
+        
+        test_mqtt = TestMqtt()
+        testee = DeconzToMqttProcessor(rules, test_mqtt)
+        testee.process_message(json.loads('{"state":{"temperature":399},"uniqueid":"1234"}'))
+        self.assertTrue(test_mqtt.get_has_published())
+        self.assertEqual("3.99", test_mqtt.get_msg()) # value from static value
         self.assertEqual("test/Test", test_mqtt.get_topic()) #topic from rules
         
     def test_static_value(self):
@@ -91,9 +139,8 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
         self.assertEqual("test/Test", test_mqtt.get_topic()) #topic from rules
         self.assertEqual("42", test_mqtt.get_msg()) # value from static value
         
-
     def test_value_expression(self):
-        # check with value-expression only
+        # check with value-transform-expression only
         rules = json.loads('''
         [
         {
@@ -113,7 +160,7 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
                     "value": "1234"
                 }
             ],
-            "value-expression": "$['state'].humidity",
+            "extract-expression": "$['state'].humidity",
             "target-mqtt-topic": "test/XiaomiAquara1Hum"
         }
         ]

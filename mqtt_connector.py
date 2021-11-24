@@ -11,12 +11,8 @@ class MQTTConnector(object):
     def __init__(self, host, port):
         self.client = mqtt.Client()
         self.client.connect(host, port, 60)
-        self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self._topic_to_callback = {}
-        
-    def _on_connect(self):
-        logger.debug("connected to mqtt")
         
     def _on_message(self, client, userdata, message):
         logger.debug("received message {} on topic {}".format(message.payload, message.topic))

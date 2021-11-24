@@ -3,9 +3,13 @@
 
 import unittest
 import json
+import logging
+import sys
+from string import Template
 
 from . mqtt_to_deconz_processor import MqttToDeconzProcessor
 
+logger = logging.getLogger(__name__)
 
 class TestMqtt(object):
     
@@ -33,8 +37,8 @@ class TestDeconzWS(object):
         self.received = {}
         self.msg = None
             
-    def send(self, path, value_bool):
-        self.received[path] = value_bool
+    def send(self, path, value):
+        self.received[path] = value
         
     def get_has_received(self):
         return True if len(self.received) > 0 else False
@@ -43,6 +47,185 @@ class TestDeconzWS(object):
         return self.received.get(path, None)
 
 class TestMqttToDeconzProcessor(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        logging.basicConfig(
+            stream=sys.stdout,
+            level=logging.DEBUG,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        logger.info("logger configured")
+
+    def check_with_type(self, value_received, extract_type="jsonpath", extract_expression="", output_expression="", transform_expression=""):
+        
+        st = '''
+        [
+            {
+                "type": "mqtt->deconz",
+                "description": "Check 1",
+                "extract-type": "${typ}",
+                "extract-expression": "${extract}",
+                "transform-expression": "${transform}",
+                "output-expression": "${output}",
+                "source-mqtt-topic": "test/Test",
+                "target-path": "/bla/state"
+            }
+        ]
+        '''
+        t = Template(st)
+        final_message = t.substitute(typ=extract_type, extract=extract_expression, output=output_expression, transform=transform_expression)
+        
+        rules = json.loads(final_message)
+        test_mqtt = TestMqtt()
+        test_deconz = TestDeconzWS()
+        
+        testee = MqttToDeconzProcessor(rules, test_mqtt, test_deconz)
+       
+        testee.process_message("test/Test", None, value_received)
+        res = test_deconz.get_for_path("/bla/state")
+ 
+        return res
+        
+    def check_without_extract(self, value_received, output_expression="", transform_expression=""):
+        
+        st = '''
+        [
+            {
+                "type": "mqtt->deconz",
+                "description": "Check 1",
+                "transform-expression": "${transform}",
+                "output-expression": "${output}",
+                "source-mqtt-topic": "test/Test",
+                "target-path": "/bla/state"
+            }
+        ]
+        '''
+        t = Template(st)
+        final_message = t.substitute(output=output_expression, transform=transform_expression)
+        
+        rules = json.loads(final_message)
+        test_mqtt = TestMqtt()
+        test_deconz = TestDeconzWS()
+        
+        testee = MqttToDeconzProcessor(rules, test_mqtt, test_deconz)
+       
+        testee.process_message("test/Test", None, value_received)
+        res = test_deconz.get_for_path("/bla/state")
+ 
+        return res
+
+    def test_transforms(self):
+        
+        # float transform
+        transform_expression = "float"
+        output_expression = "{:.2f}"
+        value_received = "8"
+        res1 = self.check_without_extract(value_received, output_expression=output_expression, transform_expression=transform_expression)
+        self.assertEqual(res1, "8.00")
+        
+        # divide by 100 transform
+        transform_expression = "divide-by-100"
+        output_expression = "{:.2f}"
+        value_received = "1234.56"
+        res1 = self.check_without_extract(value_received, output_expression=output_expression, transform_expression=transform_expression)
+        self.assertEqual(res1, "12.35")
+        
+    def test_single_numbers(self):
+        
+        extract_expression = "[0-9.?0-9*]+"
+        output_expression = "{{ 'set_to': {0} }}"
+        value_received = "8"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'set_to': 8 }")
+        
+        value_received = "42"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'set_to': 42 }")
+        
+        value_received = "42.3"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'set_to': 42.3 }")
+        
+        value_received = "42 666"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'set_to': 42 }")
+        
+        # without value-output-format
+        value_received = "42"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
+        self.assertEqual(res1, "42")
+        
+    def test_single_strings(self):
+        extract_expression = "[0-9a-zA-Z]+"
+        output_expression = "{{ 'name': {0!r} }}"
+        value_received = "Hello"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'name': 'Hello' }")
+        
+        value_received = "Hi There"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'name': 'Hi' }")
+        
+        # without value-output-format
+        value_received = "foo"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
+        self.assertEqual(res1, "foo")
+        
+    def test_multiple_number_matches(self):
+        extract_expression = "[0-9]+"
+        output_expression = "{{ 'first': {0}, 'second': {1} }}"
+        value_received = "0815 42"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'first': 0815, 'second': 42 }")
+        
+        # without value-output-format
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
+        assert res1 == ["0815", "42"]
+        
+    def test_multiple_string_matches(self):
+        extract_expression = "[a-zA-Z]+"
+        output_expression = "{{ 'first': '{0}', 'second': '{1}' }}"
+        value_received = "foo bar"
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'first': 'foo', 'second': 'bar' }")
+        
+        # without value-output-format
+        res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
+        assert res1 == ["foo", "bar"]
+
+    def test_todo(self):
+        
+        # create a readme.md file for project
+        
+        # runme with python -m unittest processors.test_mqtt_to_deconz_processor.TestMqttToDeconzProcessor.test_non_bool
+        self.fail("need to implement more tests")
+
+    def test_single_bools(self):
+        
+        extract_expression = "[Oo][Nn]|[Tt][Rr][Uu][Ee]|1"
+        output_expression = "{{ 'success': {} }}"
+        value_received = "true"
+        res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'success': true }")
+        
+        value_received = "false"
+        res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'success': false }")
+
+        value_received = "something_that_is_not_true"
+        res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression, output_expression=output_expression)
+        self.assertEqual(res1, "{ 'success': false }")
+        
+        # without value-output-format
+        value_received = "foo"
+        res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression)
+        self.assertEqual(res1, "false")
+        
+        value_received = "ON"
+        res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression)
+        self.assertEqual(res1, "true")
+        
 
     def test_regex(self):
         import re
@@ -64,66 +247,3 @@ class TestMqttToDeconzProcessor(unittest.TestCase):
         self.assertFalse(p.match("tru"))
         
         self.assertFalse(p.match("0"))
-        
-    def test_value_1(self):
-        rules = json.loads('''
-        [
-        {
-            "type": "mqtt->deconz",
-            "description": "Check 1",
-            "value-expression-type": "regex",
-            "value-expression": "[Oo][Nn]|[Tt][Rr][Uu][Ee]|1",
-            "source-mqtt-topic": "test/Test",
-            "target-path": "/bla/state"
-        }
-        ]
-        ''')
-    
-        # valid example
-        test_mqtt = TestMqtt()
-        test_deconz = TestDeconzWS()
-        
-        testee = MqttToDeconzProcessor(rules, test_mqtt, test_deconz)
-        self.assertTrue(test_mqtt.get_has_subscription_to("test/Test"))
-
-        #1st try wrong topic
-        topic = "bla"
-        userdata = None
-        message = "off"
-        testee.process_message(topic, userdata, message)
-        self.assertFalse(test_deconz.get_has_received())
-        test_deconz.reinit()
-        
-        #2nd try (false/off/0)
-        topic = "test/Test"
-        userdata = None
-
-        testee.process_message(topic, userdata, "false")
-        self.assertEqual(test_deconz.get_for_path("/bla/state"), False)
-        test_deconz.reinit()
-        
-        testee.process_message(topic, userdata, "off")
-        self.assertEqual(test_deconz.get_for_path("/bla/state"), False)
-        test_deconz.reinit()
-        
-        testee.process_message(topic, userdata, "0")
-        self.assertEqual(test_deconz.get_for_path("/bla/state"), False)
-        test_deconz.reinit()
-        
-        #3rd try (true/on/1)
-        topic = "test/Test"
-        userdata = None
-        
-        testee.process_message(topic, userdata, "true")
-        self.assertEqual(test_deconz.get_for_path("/bla/state"), True)
-        test_deconz.reinit()
-        
-        testee.process_message(topic, userdata, "on")
-        self.assertEqual(test_deconz.get_for_path("/bla/state"), True)
-        test_deconz.reinit()
-        
-        testee.process_message(topic, userdata, "1")
-        self.assertEqual(test_deconz.get_for_path("/bla/state"), True)
-        test_deconz.reinit()
-        
-        

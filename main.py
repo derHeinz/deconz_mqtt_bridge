@@ -64,18 +64,13 @@ def init_deconz_rest(config):
 
     class Deconz(object):          
         
-        def send(self, path, value_bool):
+        def send(self, path, value_str):
             # construct url
             api_token = config['api_token']
             rest_url = config["rest_url"]
             full_url = rest_url + "/api/" + api_token + path
-            
-            # construct json
-            val_str = json.dumps({
-                'on': value_bool
-            })
-            
-            put_value_to(full_url, val_str)
+                        
+            put_value_to(full_url, value_str)
             
     return Deconz()
     
