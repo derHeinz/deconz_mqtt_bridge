@@ -21,6 +21,31 @@ class ProcessorRule(object):
         if c1 in config and c2 not in config:
             self._raise_value_error(f'"{c1}" is configured but "{c2}" is not defined.')
     
+    def _raise_error_if_transform_expression_invalid(self):
+        if not self.transform_expression:
+            return
+    
+        valid_types = ['int', 'float']
+        if self.transform_expression in  valid_types:
+            return
+    
+        # divide-by or multiply-by
+        divide_by = False
+        rest = None
+        if self.transform_expression.startswith(self.DIVIDE_BY_):
+            divide_by = True
+            rest = self.transform_expression[len(self.DIVIDE_BY_):]
+        elif self.transform_expression.startswith(self.MULTIPLY_BY_):
+            rest = self.transform_expression[len(self.MULTIPLY_BY_):]
+        else:
+            return # nothing else to validate
+            
+        # check whether rest of type is a number
+        try:
+            float(rest)
+        except ValueError:
+            self._raise_value_error("wrong transform_expression, multiply-by or divide-by invalid")
+    
     def __init__(self, config):
     
         # parsing
@@ -89,6 +114,7 @@ class ProcessorRule(object):
             
             self.transform_type = config.get('transform-type', 'typeconvert')
             self.transform_expression = config.get('transform-expression', None)
+            self._raise_error_if_transform_expression_invalid()
             self.output_type = config.get('output-type', 'stringformat')
             self.output_expression = config.get('output-expression', None)
         
@@ -125,9 +151,16 @@ class ProcessorRule(object):
         logger.debug("all match")
         return True
             
+    DIVIDE_BY_ = "divide-by-"
+    MULTIPLY_BY_ = "multiply-by-"
+    
     def _do_transform(self, extract_result):
+        if not extract_result:
+            return extract_result
+        
         if not (self.transform_expression):
             return extract_result
+            
         # do your transform
         if self.transform_expression == 'int':
             try:
@@ -143,30 +176,27 @@ class ProcessorRule(object):
                 logger.error(f"cannot convert {extract_result} into float")
                 return extract_result
                 
-        if self.transform_expression == 'divide-by-10':
-            try:
-                n = float(extract_result)
-                return n/10
-            except ValueError:
-                logger.error(f"cannot convert {extract_result} into float")
-                return extract_result
-                
-        if self.transform_expression == 'divide-by-100':
-            try:
-                n = float(extract_result)
-                return n/100
-            except ValueError:
-                logger.error(f"cannot convert {extract_result} into float")
-                return extract_result
-                
-        if self.transform_expression == 'divide-by-1000':
-            try:
-                n = float(extract_result)
-                return n/1000
-            except ValueError:
-                logger.error(f"cannot convert {extract_result} into float")
-                return extract_result
-                
+        # divide-by or multiply-by
+        divide_by = False
+        rest = None
+        if self.transform_expression.startswith(self.DIVIDE_BY_):
+            divide_by = True
+            rest = self.transform_expression[len(self.DIVIDE_BY_):]
+        elif self.transform_expression.startswith(self.MULTIPLY_BY_):
+            rest = self.transform_expression[len(self.MULTIPLY_BY_):]
+        else:
+            return extract_result
+        # check whether rest of type is a number
+        try:
+            rest_number = float(rest)
+            num = float(extract_result)
+            if divide_by:
+                return num/rest_number
+            else:
+                return num*rest_number
+        except ValueError:
+            logger.error(f"cannot convert into float")
+            return extract_result
 
     def _do_output(self, transform_result):
         if not (self.output_expression):
@@ -176,28 +206,19 @@ class ProcessorRule(object):
             return self.output_expression.format(*transform_result)
         return self.output_expression.format(transform_result)
 
-    def get_value(self, message):
-        logger.debug(f"calling get_value with {message}")
-        
-        # if static value defined
-        if (self.value):
-            return self.value
-            
-        # result calculated
-        extract_result = None
-            
+    def _do_extract(self, message):
         # phase 1 extract
         if self.extract_type == 'jsonpath':
             logger.debug(f"matching jsonpath {self.extract_expression} against message {message}")
             
             jsonpath_extract = jsonpath.jsonpath(message, self.extract_expression)
-            extract_result = str(jsonpath_extract[0])
+            return str(jsonpath_extract[0])
 
         elif self.extract_type == 'regex':
             logger.debug(f"matching regex {self.extract_expression} against data {message} and return bool whether matches or not")
             
             regex_res = self.extract_expression_pattern.match(message)
-            extract_result = 'true' if regex_res else 'false'
+            return 'true' if regex_res else 'false'
             
         elif self.extract_type == 'regex_multi':
             logger.debug("matching regex {} against data {} multiple times.".format(self.extract_expression, message))
@@ -208,11 +229,20 @@ class ProcessorRule(object):
             # con: in case you may get one or many results you won't be able to express anything. TODO make this deactivateable by config
             if len(extract_result) == 1:
                 extract_result = extract_result[0]
+            return extract_result
             
         else:
-            extract_result = message
+            return message
 
-        # make phase transform and output
+    def get_value(self, message):
+        logger.debug(f"calling get_value with {message}")
+        
+        # if static value defined
+        if (self.value):
+            return self.value
+            
+        # 3-phases approach
+        extract_result = self._do_extract(message)
         transform_result = self._do_transform(extract_result)
         output_result = self._do_output(transform_result)
 

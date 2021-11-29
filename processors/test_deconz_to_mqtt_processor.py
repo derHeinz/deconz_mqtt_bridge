@@ -31,7 +31,7 @@ class TestMqtt(object):
 class TestDeconzToMqttProcessor(unittest.TestCase):
 
     def test_value_expression_format(self):
-        # check with value-transform-expression and value-output-format
+        # check with extract-expression and output-expression
         # check with value only
         rules = json.loads('''
         [
@@ -65,7 +65,7 @@ class TestDeconzToMqttProcessor(unittest.TestCase):
         
         
     def test_value_expression_format_2(self):
-        # check with value-transform-expression and value-output-format
+        # check with extract-expression, output-expression and transform-expression
         # check with value only
         rules = json.loads('''
         [
