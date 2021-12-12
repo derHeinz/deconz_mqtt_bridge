@@ -4,6 +4,7 @@
 import logging
 import jsonpath
 import re
+import datetime
 
 from matchers.matchers import parse_matcher
 
@@ -176,6 +177,16 @@ class ProcessorRule(object):
                 logger.error(f"cannot convert {extract_result} into float")
                 return extract_result
                 
+        if self.transform_expression == 'localdatetime':
+            try:
+                extract_result_fixed = extract_result.replace('Z', '+00:00')
+                datetime_utc = datetime.datetime.fromisoformat(extract_result_fixed)
+                LOCAL_TIMEZONE = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+                return datetime_utc.astimezone(LOCAL_TIMEZONE)
+            except ValueError:
+                logger.error(f"cannot convert {extract_result} into datetime")
+                return extract_result
+                
         # divide-by or multiply-by
         divide_by = False
         rest = None
@@ -195,16 +206,23 @@ class ProcessorRule(object):
             else:
                 return num*rest_number
         except ValueError:
-            logger.error(f"cannot convert into float")
+            logger.error(f"error converting to number or calculating with {rest}")
             return extract_result
 
     def _do_output(self, transform_result):
+        if not transform_result:
+            return transform_result
+        
         if not (self.output_expression):
             return transform_result
 
-        if isinstance(transform_result, list):
-            return self.output_expression.format(*transform_result)
-        return self.output_expression.format(transform_result)
+        try:
+            if isinstance(transform_result, list):
+                return self.output_expression.format(*transform_result)
+            return self.output_expression.format(transform_result)
+        except ValueError:
+            logger.error(f"cannot format {transform_result}")
+            return transform_result
 
     def _do_extract(self, message):
         # phase 1 extract

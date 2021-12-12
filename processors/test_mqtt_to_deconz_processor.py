@@ -134,83 +134,83 @@ class TestMqttToDeconzProcessor(unittest.TestCase):
     def test_single_numbers(self):
         
         extract_expression = "[0-9.?0-9*]+"
-        output_expression = "{{ 'set_to': {0} }}"
+        output_expression = "{{ \\\"set_to\\\": {0} }}"
         value_received = "8"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'set_to': 8 }")
+        self.assertEqual(res1, "{ \"set_to\": 8 }")
         
         value_received = "42"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'set_to': 42 }")
+        self.assertEqual(res1, "{ \"set_to\": 42 }")
         
         value_received = "42.3"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'set_to': 42.3 }")
+        self.assertEqual(res1, "{ \"set_to\": 42.3 }")
         
         value_received = "42 666"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'set_to': 42 }")
+        self.assertEqual(res1, "{ \"set_to\": 42 }")
         
-        # without value-output-format
+        # without output_expression
         value_received = "42"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
         self.assertEqual(res1, "42")
         
     def test_single_strings(self):
         extract_expression = "[0-9a-zA-Z]+"
-        output_expression = "{{ 'name': {0!r} }}"
+        output_expression = "{{ \\\"name\\\": \\\"{0}\\\" }}"
+        
         value_received = "Hello"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'name': 'Hello' }")
+        self.assertEqual(res1, "{ \"name\": \"Hello\" }")
         
         value_received = "Hi There"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'name': 'Hi' }")
+        self.assertEqual(res1, "{ \"name\": \"Hi\" }")
         
-        # without value-output-format
+        # without output_expression
         value_received = "foo"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
         self.assertEqual(res1, "foo")
         
     def test_multiple_number_matches(self):
         extract_expression = "[0-9]+"
-        output_expression = "{{ 'first': {0}, 'second': {1} }}"
+        output_expression = "{{ \\\"first\\\": {0}, \\\"second\\\": {1} }}"
         value_received = "0815 42"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'first': 0815, 'second': 42 }")
+        self.assertEqual(res1, "{ \"first\": 0815, \"second\": 42 }")
         
-        # without value-output-format
+        # without output_expression
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
         assert res1 == ["0815", "42"]
         
     def test_multiple_string_matches(self):
         extract_expression = "[a-zA-Z]+"
-        output_expression = "{{ 'first': '{0}', 'second': '{1}' }}"
+        output_expression = "{{ \\\"first\\\": \\\"{0}\\\", \\\"second\\\": \\\"{1}\\\" }}"
         value_received = "foo bar"
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'first': 'foo', 'second': 'bar' }")
+        self.assertEqual(res1, "{ \"first\": \"foo\", \"second\": \"bar\" }")
         
-        # without value-output-format
+        # without output_expression
         res1 = self.check_with_type(value_received, extract_type="regex_multi", extract_expression=extract_expression)
         assert res1 == ["foo", "bar"]
 
     def test_single_bools(self):
-        
         extract_expression = "[Oo][Nn]|[Tt][Rr][Uu][Ee]|1"
-        output_expression = "{{ 'success': {} }}"
-        value_received = "true"
+        output_expression = "{{ \\\"success\\\": {} }}"
+        value_received = "True"
         res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'success': true }")
+        self.assertEqual(res1, "{ \"success\": true }")
         
         value_received = "false"
         res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'success': false }")
+        self.assertEqual(res1, "{ \"success\": false }")
 
         value_received = "something_that_is_not_true"
         res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression, output_expression=output_expression)
-        self.assertEqual(res1, "{ 'success': false }")
+        self.assertEqual(res1, "{ \"success\": false }")
         
-        # without value-output-format
+        # without output_expression
         value_received = "foo"
         res1 = self.check_with_type(value_received, extract_type="regex", extract_expression=extract_expression)
         self.assertEqual(res1, "false")
